@@ -1,34 +1,28 @@
-let solarEnergy = 0.5; // default fallback
+let magneticEnergy = 0.2;
 
-async function fetchSolarData() {
+async function fetchKpIndex() {
   try {
     const response = await fetch(
-      "https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json"
+      "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
     );
+
     const data = await response.json();
 
-    // Last row = latest measurement
     const latest = data[data.length - 1];
+    const kp = parseFloat(latest[1]);
 
-    const windSpeed = parseFloat(latest[2]); // km/s
+    // Normalize 0–9 scale
+    magneticEnergy = THREE.MathUtils.clamp(kp / 9, 0, 1);
 
-    // Normalize wind speed range (typically 250–800 km/s)
-    solarEnergy = THREE.MathUtils.clamp(
-      (windSpeed - 250) / (800 - 250),
-      0,
-      1
-    );
-
-    console.log("Solar wind speed:", windSpeed, "Normalized:", solarEnergy);
+    console.log("Kp Index:", kp, "Normalized:", magneticEnergy);
 
   } catch (error) {
-    console.log("Solar data fetch failed, using fallback.");
+    console.log("Kp fetch failed, using fallback.");
   }
 }
 
-// Fetch immediately and every 5 minutes
-fetchSolarData();
-setInterval(fetchSolarData, 300000);
+fetchKpIndex();
+setInterval(fetchKpIndex, 600000);
 
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js';
 
@@ -50,8 +44,8 @@ const uniforms = {
 const material = new THREE.ShaderMaterial({
   uniforms,
   fragmentShader: `
-    uniform float u_time;
-uniform float u_energy;
+   uniform float u_time;
+uniform float u_energy; // Kp index normalized
 uniform vec2 u_resolution;
 
 float hash(vec2 p) {
@@ -74,48 +68,43 @@ float noise(vec2 p){
          (d - b) * u.x * u.y;
 }
 
-vec3 solarPalette(float t) {
+vec3 magneticPalette(float t) {
 
-  // grounded warm solar spectrum
-  vec3 deep   = vec3(0.16, 0.05, 0.06);   // warm rose shadow
-  vec3 ember  = vec3(0.85, 0.38, 0.15);   // coral core
-  vec3 gold   = vec3(1.0, 0.72, 0.28);    // radiant gold
-  vec3 peach  = vec3(1.0, 0.78, 0.55);    // warm bloom (not pink)
-  vec3 flare  = vec3(1.0, 0.95, 0.82);    // incandescent light
+  vec3 abyss   = vec3(0.02, 0.05, 0.12);  // deep ultramarine
+  vec3 mineral = vec3(0.0, 0.25, 0.35);   // teal
+  vec3 oxide   = vec3(0.4, 0.1, 0.08);    // restrained iron
+  vec3 filament= vec3(0.1, 0.6, 0.7);     // faint electric
 
-  vec3 col = mix(deep, ember, smoothstep(0.0, 0.3, t));
-  col = mix(col, gold, smoothstep(0.25, 0.6, t));
-  col = mix(col, peach, smoothstep(0.55, 0.85, t));
-  col = mix(col, flare, smoothstep(0.8, 1.0, t));
+  vec3 col = mix(abyss, mineral, smoothstep(0.1, 0.6, t));
+  col = mix(col, oxide, smoothstep(0.65, 0.85, t) * 0.3);
+  col = mix(col, filament, smoothstep(0.85, 1.0, t) * 0.4);
 
   return col;
 }
 
 void main() {
+
   vec2 uv = gl_FragCoord.xy / u_resolution.xy;
   uv -= 0.5;
   uv.x *= u_resolution.x / u_resolution.y;
-  
-  float dist = length(uv);
-  float core = smoothstep(0.8, 0.0, dist);
 
-  float t = u_time * 0.03;
+  float t = u_time * 0.015; // slower than solar
 
-  float n = noise(uv * 2.5 + t);
-  float breath = sin(u_time * 0.1) * 0.5 + 0.5;
+  // horizontal dominant drift
+  vec2 flow = uv;
+  flow.x += t * 0.2;
 
-  float energyInfluence = mix(n, breath, u_energy);
+  // vertical shear (deep current)
+  flow.y += noise(uv * 0.5 + t * 0.2) * 0.3;
 
-  // Slight density increase toward center
-  energyInfluence += core * 0.15;
+  // geomagnetic tension (distortion strength)
+  float tension = u_energy * 0.6;
 
-  // slow hue drift for subtle color shifting
-  float drift = sin(u_time * 0.02) * 0.5 + 0.5;
-  float micro = sin(u_time * 0.07) * 0.03;
+  flow += noise(uv * 2.0 + t) * tension * 0.4;
 
-  vec3 color = solarPalette(energyInfluence + drift * 0.28 + micro);
-  // Soft atmospheric fade toward edges
-  color *= 0.9 + core * 0.1;
+  float field = noise(flow * 3.0);
+
+  vec3 color = magneticPalette(field);
 
   gl_FragColor = vec4(color, 1.0);
 }
@@ -128,7 +117,7 @@ scene.add(mesh);
 function animate() {
   requestAnimationFrame(animate);
   material.uniforms.u_time.value = performance.now() / 1000;
-  material.uniforms.u_energy.value = solarEnergy;
+  material.uniforms.u_energy.value = magneticEnergy;
   renderer.render(scene, camera);
 }
 
