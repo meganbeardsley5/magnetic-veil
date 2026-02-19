@@ -95,7 +95,7 @@ void main() {
   flow.x += t * 0.4;
 
   // Create large-scale horizontal bands
-  float bands = sin((uv.y + noise(uv * 0.5) * 0.1) * 8.0);
+  float bands = sin((uv.y + noise(uv * 0.5) * 0.1) * 12.0);
 
   // Curvature toward poles (magnetosphere arc suggestion)
   float curve = uv.y * uv.y * 0.8;
