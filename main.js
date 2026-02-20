@@ -88,29 +88,40 @@ void main() {
   uv -= 0.5;
   uv.x *= u_resolution.x / u_resolution.y;
 
-  float t = u_time * 0.008; // heavier, slower
+  float t = u_time * 0.006; // very slow tectonic time
 
-  // Strong directional stretch (anisotropy)
+  // Ultra subtle rotation for structural evolution
+  float angle = sin(u_time * 0.002) * 0.2;
+  mat2 rot = mat2(
+    cos(angle), -sin(angle),
+    sin(angle),  cos(angle)
+  );
+  uv = rot * uv;
+
+  // Strong anisotropic stretch
   vec2 stretched = vec2(uv.x * 3.5, uv.y * 0.4);
 
-  // Horizontal drift
-  stretched.x += t * 0.6;
+  // Slow horizontal drift
+  stretched.x += t * 0.8;
 
-  // Curvature shaping (subtle magnetosphere arc)
+  // Curvature shaping
   stretched.x += uv.y * uv.y * 1.2;
 
-  // Base layered striations
-  float strata = sin(uv.y * 18.0);
+  // Deep compression wave (tectonic pulse)
+  float compression = sin(uv.y * 4.0 + u_time * 0.15) * 0.1;
+  stretched.y += compression;
 
   // Geomagnetic tension
   float tension = u_energy;
 
-  // Distort only along horizontal axis
-  stretched.x += noise(stretched + t) * 0.3 * tension;
+  // Controlled distortion along horizontal axis
+  stretched.x += noise(stretched + t) * 0.25 * tension;
 
-  // Combine structure + noise
-  float field = noise(stretched * 1.5) * 0.7
-              + strata * 0.15;
+  // Evolving strata phase
+  float strata = sin((uv.y + u_time * 0.02) * 18.0);
+
+  float field = noise(stretched * 1.5) * 0.65
+              + strata * 0.18;
 
   field = clamp(field, 0.0, 1.0);
 
