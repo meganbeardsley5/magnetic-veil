@@ -102,7 +102,7 @@ void main() {
   vec2 stretched = vec2(uv.x * 3.5, uv.y * 0.4);
 
   // Slow horizontal drift
-  stretched.x += t * 0.8;
+  stretched.x += t * 0.15;
 
   // Curvature shaping
   stretched.x += uv.y * uv.y * 1.2;
