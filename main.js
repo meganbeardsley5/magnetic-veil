@@ -102,13 +102,13 @@ void main() {
   vec2 stretched = vec2(uv.x * 3.5, uv.y * 0.4);
 
   // Slow horizontal drift
-  stretched.x += t * 0.2;
+  stretched.x += t * 0.08;
 
   // Curvature shaping
   stretched.x += uv.y * uv.y * 1.2;
 
   // Deep compression wave (tectonic pulse)
-  float compression = sin(uv.y * 4.0 + u_time * 0.20) * 0.1;
+  float compression = sin(uv.y * 4.0 + u_time * 0.15) * 0.1;
   stretched.y += compression;
 
   // Geomagnetic tension
