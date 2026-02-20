@@ -88,26 +88,31 @@ void main() {
   uv -= 0.5;
   uv.x *= u_resolution.x / u_resolution.y;
 
-  float t = u_time * 0.01; // heavier
+  float t = u_time * 0.008; // heavier, slower
 
-  // Strong horizontal flow
-  vec2 flow = uv;
-  flow.x += t * 0.4;
+  // Strong directional stretch (anisotropy)
+  vec2 stretched = vec2(uv.x * 3.5, uv.y * 0.4);
 
-  // Create large-scale horizontal bands
-  float bands = sin((uv.y + noise(uv * 0.5) * 0.1) * 12.0);
+  // Horizontal drift
+  stretched.x += t * 0.6;
 
-  // Curvature toward poles (magnetosphere arc suggestion)
-  float curve = uv.y * uv.y * 0.8;
-  flow.x += curve * 0.6;
+  // Curvature shaping (subtle magnetosphere arc)
+  stretched.x += uv.y * uv.y * 1.2;
 
-  // Geomagnetic tension increases distortion
-  float tension = u_energy * 0.8;
+  // Base layered striations
+  float strata = sin(uv.y * 18.0);
 
-  flow.y += bands * 0.05 * tension;
-  flow += noise(flow * 2.0 + t) * 0.15 * tension;
+  // Geomagnetic tension
+  float tension = u_energy;
 
-  float field = noise(flow * 2.5);
+  // Distort only along horizontal axis
+  stretched.x += noise(stretched + t) * 0.3 * tension;
+
+  // Combine structure + noise
+  float field = noise(stretched * 1.5) * 0.7
+              + strata * 0.15;
+
+  field = clamp(field, 0.0, 1.0);
 
   vec3 color = magneticPalette(field);
 
