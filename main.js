@@ -108,7 +108,7 @@ void main() {
   stretched.x += uv.y * uv.y * 1.2;
 
   // Deep compression wave (tectonic pulse)
-  float compression = sin(uv.y * 4.0 + u_time * 0.15) * 0.1;
+  float compression = sin(uv.y * 4.0 + u_time * 0.25) * 0.1;
   stretched.y += compression;
 
   // Geomagnetic tension
